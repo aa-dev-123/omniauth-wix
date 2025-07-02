@@ -1,4 +1,5 @@
 require 'omniauth/strategies/oauth2'
+require 'rest-client'
 
 module OmniAuth
   module Strategies
@@ -32,7 +33,6 @@ module OmniAuth
 
       def request_phase
         request_params = authorize_params
-
         get_params = session['omniauth.params'] || {}
         request_params['token'] = get_params['token'] if get_params['token']
         request_params['appId'] = options.client_id
