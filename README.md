@@ -1,43 +1,102 @@
-# Omniauth::Wix
 
-TODO: Delete this and the text below, and describe your gem
+This is an **OmniAuth strategy** for authenticating with **[Wix](https://www.wix.com/)** using **OAuth2**. It enables your Rails application to connect with Wix via OAuth, retrieve site and instance information, and authorize users securely.
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/omniauth/wix`. To experiment with that code, run `bin/console` for an interactive prompt.
+---
 
-## Installation
+## 💎 Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+Add this line to your application's `Gemfile`:
 
-Install the gem and add to the application's Gemfile by executing:
+```ruby
+# If using a local gem path (development)
+gem 'omniauth-wix', path: '../path/to/omniauth-wix'
 
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+# Or from a private/public GitHub repo:
+# gem 'omniauth-wix', github: 'yourusername/omniauth-wix'
+
+# and then
+bundle install
+
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+## ⚙️ Usage
+In your Rails app, configure OmniAuth in an initializer (config/initializers/omniauth.rb):
 
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+Rails.application.config.middleware.use OmniAuth::Builder do
+  provider :wix, ENV['WIX_APP_ID'], ENV['WIX_APP_SECRET']
+end
+
 ```
 
-## Usage
+Set the following environment variables:
 
-TODO: Write usage instructions here
+```ruby
+WIX_APP_ID=your_app_id
+WIX_APP_SECRET=your_app_secret
+```
 
-## Development
+## 🔁 OAuth Flow
+Wix will redirect to your app with a token param. You should create a route and controller action like this:
 
-After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+routes.rb
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```ruby
+get '/auth/:provider/callback', to: 'sessions#create'
+get '/auth/failure', to: 'sessions#failure'
+```
 
-## Contributing
+SessionsController
+```ruby
+class SessionsController < ApplicationController
+  def create
+    auth = request.env['omniauth.auth']
+    # Example: use auth.info[:email] or auth.uid
+    render json: auth
+  end
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/omniauth-wix. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/omniauth-wix/blob/master/CODE_OF_CONDUCT.md).
+  def failure
+    render plain: "Authentication failed"
+  end
+end
+```
 
-## License
+If you support Wix App Market installs via GET, handle redirection via POST:
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+```ruby
+# app/controllers/authentications_controller.rb
+def blank
+  if params[:provider] == "wix"
+    repost("/auth/wix", params: { provider: "wix", token: params[:token] }, options: { authenticity_token: :auto }) and return
+  end
 
-## Code of Conduct
+  render plain: "Not Found", status: 404
+end
+```
 
-Everyone interacting in the Omniauth::Wix project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/omniauth-wix/blob/master/CODE_OF_CONDUCT.md).
+
+
+
+## 📦 Auth Hash Schema
+The authentication data returned by OmniAuth will look like this:
+
+```ruby
+{
+  provider: 'wix',
+  uid: 'your_instance_id',
+  info: {
+    site_url: 'https://yoursite.wixsite.com',
+    email: 'owner@example.com'
+  },
+  extra: {
+    raw_info: { ...site_data... }
+  },
+  credentials: {
+    token: 'access_token',
+    refresh_token: nil,
+    expires: true,
+    expires_at: 1234567890
+  }
+}
+
+```
