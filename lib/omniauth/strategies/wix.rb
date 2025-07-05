@@ -41,12 +41,17 @@ module OmniAuth
         redirect client.auth_code.authorize_url({ redirectUrl: callback_url }.merge(request_params))
       end
 
+      ### callback_phase
+      # Handles the response after user authorizes:
+      # Exchanges the code for an access_token via build_access_token
+
       def callback_url
         full_host + script_name + callback_path
       end
 
       # overides the build_access_token method
       # that is used in callback_phase
+      # This exchanges the authorization_code for an access token.
       def build_access_token
         params = {
           'grant_type': 'authorization_code',
