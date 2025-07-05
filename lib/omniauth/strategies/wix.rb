@@ -4,11 +4,11 @@ require 'rest-client'
 module OmniAuth
   module Strategies
     class Wix < OmniAuth::Strategies::OAuth2
-      option :provider_ignores_state, true
+      option :provider_ignores_state, true # If true, skips CSRF check
 
       option :client_options, {
-        site: 'https://www.wix.com',
-        authorize_url: '/installer/install',
+        site: 'https://www.wix.com', # The base URL of the site where authorize_url and token_url will append
+        authorize_url: '/installer/install', 
         token_url: '/oauth/access'
       }
 
@@ -31,6 +31,7 @@ module OmniAuth
         @raw_info ||= access_token.get('https://www.wixapis.com/apps/v1/instance').parsed
       end
 
+      # This method starts the OAuth flow by redirecting the user to the provider's authorization URL.
       def request_phase
         request_params = authorize_params
         get_params = session['omniauth.params'] || {}
@@ -44,6 +45,8 @@ module OmniAuth
         full_host + script_name + callback_path
       end
 
+      # overides the build_access_token method
+      # that is used in callback_phase
       def build_access_token
         params = {
           'grant_type': 'authorization_code',
